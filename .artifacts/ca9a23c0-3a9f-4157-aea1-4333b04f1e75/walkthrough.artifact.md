@@ -1,37 +1,38 @@
-# AI Storyteller: Personalized Adventures 📖✨
+# Magic Quests & Sensory Feedback 🎯📳✨
 
-I have implemented the **AI Storyteller** feature, a personalized audio adventure console for children. This feature brings the "Genie the Lion" project to life by making the child the hero of their own stories.
+I have implemented a comprehensive **Daily Quest System** and enhanced the game's "feel" with **Haptic Feedback**. This update turns the app from a simple game collection into a goal-driven educational platform.
 
 ## 🚀 Key Features
 
-### 1. Personalized Narratives
-- Stories are dynamically updated to include the child's name (e.g., "Commander Abdurahmon jumped into a sparkling rocket ship").
-- Current adventures include:
-    - **Jungle Adventure 🌴**: Find hidden treasure with a friendly elephant.
-    - **Space Hero 🚀**: Teach aliens how to high-five on Mars.
-    - **Magic Dragon 🐲**: Fly around the world with a cloud-dwelling dragon.
+### 1. Daily Quest System 🎯
+- **Interactive Goals**: Kids now have daily challenges visible on their dashboard (e.g., "Math Master", "Story Listener").
+- **Real-time Progress**: Playing games automatically updates quest progress.
+- **Reward Claiming**: Once a goal is met, kids can click "Claim 🎁" to receive bonus coins and XP.
 
-### 2. Interactive Console
-- **Story Selector**: A horizontal scroll bar allowing kids to switch themes instantly.
-- **Audio Controls**: Play, Pause, and Stop buttons to control the AI voice narration.
-- **Visual Feedback**: The interface changes emojis and animations based on the active story.
+### 2. Sensory (Haptic) Feedback 📳
+- **Impactful Interaction**: The device now provides physical vibration feedback:
+    - **Light Pulse**: On a correct answer, rewarding the child's touch.
+    - **Heavy Pulse**: On an incorrect answer, signaling a need for retry.
+- **Why it matters**: This makes the app feel "alive" and premium, similar to high-end console games.
 
-### 3. Smart Rewards
-- Finishing a story rewards the child with **+10 Coins** and **+30 XP**, encouraging active listening.
+### 3. Visual Polish ✨
+- **Quest Cards**: Sleek new cards on the home screen with progress bars and "Claim" states.
+- **Status Sync**: All rewards are automatically added to the user's global balance.
 
 ---
 
 ## 📂 Technical Implementation
-- **Cloud Category**: Added `AI Storyteller` to the global `gameCategoriesProvider`.
-- **Audio Management**: Updated `VoiceService` to support manual stopping of the TTS engine.
-- **Dynamic Content**: Implemented a template engine that replaces placeholders with live user data from `Riverpod`.
+- **Architecture**: Integrated `QuestModel` into the core data layer.
+- **Provider Pattern**: Created `QuestNotifier` using Riverpod for global state management.
+- **System Integration**: Utilized Flutter's `HapticFeedback` services for device interaction.
 
 ---
 
 ## 🎥 Next Steps
-1. **Launch the App**: Go to the **Play** tab and select the **📖 AI Storyteller** category.
-2. **Listen**: Pick "Space Hero" and click the **Play** button.
-3. **Enjoy**: Hear your name spoken by the AI as the adventure unfolds!
+1.  **Open the App**: Look at the new **🎯 Daily Quests** section on the Home screen.
+2.  **Play a Game**: Go to "Math Quest" and answer 3 questions correctly.
+3.  **Check Progress**: Return to Home and see the progress bar filled!
+4.  **Claim Reward**: Click the button and watch your coin count grow! 💰
 
 > [!TIP]
-> The AI voice language matches your device settings (Uzbek/Turkish/English), ensuring the stories sound as natural as possible!
+> Try playing on a physical phone to feel the new vibration effects! On Web, the UI animations and confetti will still provide great feedback.

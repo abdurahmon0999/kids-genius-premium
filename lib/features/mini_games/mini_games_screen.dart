@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/cupertino.dart';
 import 'dart:ui' as ui;
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../core/widgets/bouncy_button.dart';
 import '../../core/services/kids_providers.dart';
 import '../../core/services/voice_service.dart';
-
 import 'package:lottie/lottie.dart';
+import 'zombie_game_screen.dart';
+import '../sky_rush/screens/sky_rush_home_screen.dart';
+import '../turbo_kart/screens/turbo_kart_home_screen.dart';
 
 class DrawingPoint {
   final Offset offset;
@@ -50,6 +54,7 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
   int _activeCategoryIndex = 0; 
   int _score = 0;
   int _questionIndex = 0;
+  String _difficulty = 'easy'; // 'easy', 'medium', 'hard'
 
   // Maze State
   int _mazeX = 0;
@@ -245,9 +250,16 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
     bool isCorrect = selected == currentQ['ans'];
 
     if (isCorrect) {
-      _score += 10;
-      ref.read(userProfileProvider.notifier).addCoins(15);
-      ref.read(userProfileProvider.notifier).addXp(25);
+      int multiplier = _difficulty == 'hard' ? 3 : (_difficulty == 'medium' ? 2 : 1);
+      int coinsAward = 15 * multiplier;
+      int xpAward = 25 * multiplier;
+
+      _score += 10 * multiplier;
+      ref.read(userProfileProvider.notifier).addCoins(coinsAward);
+      ref.read(userProfileProvider.notifier).addXp(xpAward);
+      ref.read(questProvider.notifier).updateProgress(categoryKey); // Update Quests
+      
+      HapticFeedback.lightImpact(); // Sensory Feedback
       _confettiController.play();
       VoiceService.speakSuccess();
 
@@ -258,7 +270,7 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
         barrierColor: Colors.black45,
         builder: (context) {
           Future.delayed(const Duration(seconds: 2), () {
-            if (Navigator.canPop(context)) Navigator.pop(context);
+            if (context.mounted && Navigator.canPop(context)) Navigator.pop(context);
           });
           return Center(
             child: Lottie.network(
@@ -274,13 +286,14 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('🎉 Barakalla! ${categoryKey == 'word_builder' ? "Javob: ${currentQ['full']}!" : "+15 Tanga & +25 XP!"}'),
+          content: Text('🎉 Barakalla! ${categoryKey == 'word_builder' ? "Javob: ${currentQ['full']}!" : "+$coinsAward Tanga & +$xpAward XP!"}'),
           backgroundColor: AppColors.success,
           duration: const Duration(milliseconds: 1000),
           behavior: SnackBarBehavior.floating,
         ),
       );
     } else {
+      HapticFeedback.heavyImpact(); // Sensory Feedback for errors
       VoiceService.speakError();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -311,14 +324,39 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
 
   void _switchGame(int index) {
     final categories = ref.read(gameCategoriesProvider);
+    final currentCategory = categories[index.clamp(0, categories.length - 1)];
+
+    if (currentCategory.categoryKey == 'zombie_survival') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ZombieGameScreen()),
+      );
+      return;
+    }
+
+    if (currentCategory.categoryKey == 'sky_rush') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const SkyRushHomeScreen()),
+      );
+      return;
+    }
+
+    if (currentCategory.categoryKey == 'turbo_kart') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const TurboKartHomeScreen()),
+      );
+      return;
+    }
+
     setState(() {
       _activeCategoryIndex = index;
       _questionIndex = 0;
-      final currentCategory = categories[index.clamp(0, categories.length - 1)];
       
       if (currentCategory.categoryKey == 'maze') {
         _resetMaze();
-        VoiceService.speak("Labirint o'yinini boshlaymiz! Marraga yetib boring.");
+        VoiceService.speak(tr('maze_start_msg'));
       } else {
         _speakCurrentQuestion();
       }
@@ -347,19 +385,23 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
         ref.read(userProfileProvider.notifier).addXp(50);
         _confettiController.play();
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🏁 Goal Reached! +30 Coins & +50 XP!'),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(tr('goal_reached')), 
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
 
         Future.delayed(const Duration(seconds: 1), () {
-          setState(() {
-            _mazeLevel++;
-            _resetMaze();
-          });
+          if (mounted) {
+            setState(() {
+              _mazeLevel++;
+              _resetMaze();
+            });
+          }
         });
       }
     }
@@ -369,7 +411,7 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
     final level = _mazeLevels[_mazeLevel % _mazeLevels.length];
     return Column(
       children: [
-        Text('Level ${_mazeLevel + 1}', style: AppTypography.subtitle1(color: Colors.white)),
+        Text(tr('level_text', args: [(_mazeLevel + 1).toString()]), style: AppTypography.subtitle1(color: Colors.white)),
         const SizedBox(height: 16),
         Container(
           padding: const EdgeInsets.all(8),
@@ -450,7 +492,7 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
   Widget _buildDrawingGame(Color themeColor, {bool isColoringMode = false}) {
     return Column(
       children: [
-        Text(isColoringMode ? 'Coloring Book 🖍️' : 'Magic Canvas 🎨', 
+        Text(isColoringMode ? tr('coloring_book_title') : tr('magic_canvas'), 
             style: AppTypography.subtitle1(color: Colors.white)),
         const SizedBox(height: 16),
         
@@ -488,7 +530,7 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
           height: 300,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
+            color: Colors.white.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white24),
           ),
@@ -550,7 +592,7 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
         const SizedBox(height: 20),
         
         BouncyButton(
-          text: isColoringMode ? 'I Finished Coloring! ✨' : 'Finish Drawing ✨',
+          text: isColoringMode ? tr('finished_coloring') : tr('finished_drawing'),
           onTap: () {
             _score += 50;
             ref.read(userProfileProvider.notifier).addCoins(25);
@@ -558,7 +600,7 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
             _confettiController.play();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(isColoringMode ? '🖍️ Great Job Coloring! +25 Coins!' : '🎨 Beautiful Art! +25 Coins!'),
+                content: Text(isColoringMode ? tr('great_job_coloring') : tr('beautiful_art')),
                 backgroundColor: AppColors.success,
                 behavior: SnackBarBehavior.floating,
               ),
@@ -576,7 +618,7 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
 
     return Column(
       children: [
-        Text('AI Storyteller 📖', style: AppTypography.heading3(color: Colors.white)),
+        Text(tr('storyteller_title'), style: AppTypography.heading3(color: Colors.white)),
         const SizedBox(height: 16),
 
         // Story Theme Selector
@@ -662,12 +704,13 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
 
         const SizedBox(height: 20),
         BouncyButton(
-          text: 'I Finished Listening! 🌟',
+          text: tr('finished_listening'),
           onTap: () {
             VoiceService.stop();
             _score += 30;
             ref.read(userProfileProvider.notifier).addCoins(10);
             ref.read(userProfileProvider.notifier).addXp(30);
+            ref.read(questProvider.notifier).updateProgress('storyteller'); // Update Quest
             _confettiController.play();
           },
         ),
@@ -694,7 +737,7 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
       children: [
         Scaffold(
           appBar: AppBar(
-            title: Text('Mini Game Arcade 🎮',
+            title: Text(tr('arcade_title'),
                 style: AppTypography.heading2(
                     color: isDark ? Colors.white : AppColors.primary)),
           ),
@@ -702,6 +745,19 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
+                // Difficulty Selector
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildDifficultyBtn('easy', tr('easy')),
+                    const SizedBox(width: 8),
+                    _buildDifficultyBtn('medium', tr('med')),
+                    const SizedBox(width: 8),
+                    _buildDifficultyBtn('hard', tr('hard')),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
                 // Game Selector Tabs (Scrollable)
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -710,7 +766,7 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
                       final cat = categories[index];
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
-                        child: _buildGameTab(index, '${cat.iconEmoji} ${cat.title}', cat.themeColor),
+                        child: _buildGameTab(index, '${cat.iconEmoji} ${tr(cat.categoryKey)}', cat.themeColor),
                       );
                     }),
                   ),
@@ -723,7 +779,7 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
                   customGradient: LinearGradient(
                     colors: [
                       currentCategory.themeColor,
-                      currentCategory.themeColor.withOpacity(0.7),
+                      currentCategory.themeColor.withValues(alpha: 0.7),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -749,7 +805,7 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: Text(
-                                  'Score: $_score pts',
+                                  tr('score_text', args: [_score.toString()]),
                                   style: AppTypography.bodyBold(color: Colors.white),
                                 ),
                               ),
@@ -761,7 +817,7 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: Text(
-                                  'Question ${_questionIndex + 1}/${questions.length}',
+                                  tr('question_text', args: [(_questionIndex + 1).toString(), questions.length.toString()]),
                                   style: AppTypography.bodyBold(color: Colors.black),
                                 ),
                               ),
@@ -808,7 +864,7 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
                               return BouncyButton(
                                 text: '$opt',
                                 gradientStart: Colors.white,
-                                gradientEnd: Colors.white.withOpacity(0.9),
+                                gradientEnd: Colors.white.withValues(alpha: 0.9),
                                 textColor: currentCategory.themeColor,
                                 onTap: () => _onAnswerSelected(opt, currentCategory.categoryKey),
                               );
@@ -841,6 +897,22 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
     );
   }
 
+  Widget _buildDifficultyBtn(String level, String label) {
+    bool isSel = _difficulty == level;
+    return GestureDetector(
+      onTap: () => setState(() => _difficulty = level),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSel ? AppColors.primary : Colors.white10,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSel ? Colors.white : Colors.white24),
+        ),
+        child: Text(label, style: TextStyle(color: isSel ? Colors.white : Colors.grey, fontSize: 12)),
+      ),
+    );
+  }
+
   Widget _buildGameTab(int index, String label, Color color) {
     final isSelected = _activeCategoryIndex == index;
     return GestureDetector(
@@ -848,7 +920,7 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
-          color: isSelected ? color : color.withOpacity(0.15),
+          color: isSelected ? color : color.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color),
         ),
@@ -877,7 +949,7 @@ class _MiniGamesScreenState extends ConsumerState<MiniGamesScreen> {
             color: isSelected ? Colors.white : Colors.transparent,
             width: 3,
           ),
-          boxShadow: isSelected ? [BoxShadow(color: color.withOpacity(0.5), blurRadius: 8)] : [],
+          boxShadow: isSelected ? [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 8)] : [],
         ),
       ),
     );

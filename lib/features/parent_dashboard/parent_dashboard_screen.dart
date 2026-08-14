@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
-// ❌ INCORRECT (This file does not exist)
-// import 'package:cupertino_icons/cupertino_icons.dart';
-
-// ✅ CORRECT (Import Flutter's cupertino library)
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/cupertino.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -47,11 +44,11 @@ class ParentDashboardScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Parental Control & Insights 🛡️',
+                        tr('parent_dashboard_title'),
                         style: AppTypography.heading3(color: Colors.white),
                       ),
                       Text(
-                        'Monitoring: ${user.name}',
+                        tr('monitoring', args: [user.name]),
                         style: AppTypography.caption(color: Colors.white70),
                       ),
                     ],
@@ -73,16 +70,16 @@ class ParentDashboardScreen extends ConsumerWidget {
           Row(
             children: [
               _buildMetricCard(
-                title: 'Daily Study Time',
-                value: '${report.dailyStudyMinutes} mins',
+                title: tr('daily_study_time'),
+                value: '${report.dailyStudyMinutes} ${tr('minutes_short')}',
                 icon: CupertinoIcons.clock_fill,
                 color: AppColors.primary,
                 isDark: isDark,
               ),
               const SizedBox(width: 12),
               _buildMetricCard(
-                title: 'Games Played',
-                value: '${report.gamesPlayedToday} games',
+                title: tr('games_played'),
+                value: '${report.gamesPlayedToday} ${tr('games_short')}',
                 icon: CupertinoIcons.gamecontroller_fill,
                 color: AppColors.secondary,
                 isDark: isDark,
@@ -94,7 +91,7 @@ class ParentDashboardScreen extends ConsumerWidget {
 
           // Weekly Progress FL Chart
           Text(
-            '📊 Weekly Study Activity (Minutes)',
+            tr('weekly_activity'),
             style: AppTypography.heading3(
               color: isDark ? Colors.white : AppColors.primary,
             ),
@@ -125,20 +122,20 @@ class ParentDashboardScreen extends ConsumerWidget {
                       sideTitles: SideTitles(
                         showTitles: true,
                         getTitlesWidget: (double value, TitleMeta meta) {
-                          const days = [
-                            'Mon',
-                            'Tue',
-                            'Wed',
-                            'Thu',
-                            'Fri',
-                            'Sat',
-                            'Sun',
+                          const dayKeys = [
+                            'mon',
+                            'tue',
+                            'wed',
+                            'thu',
+                            'fri',
+                            'sat',
+                            'sun',
                           ];
-                          if (value.toInt() < days.length) {
+                          if (value.toInt() < dayKeys.length) {
                             return Padding(
                               padding: const EdgeInsets.only(top: 6),
                               child: Text(
-                                days[value.toInt()],
+                                dayKeys[value.toInt()].tr(),
                                 style: AppTypography.caption(
                                   color: isDark
                                       ? Colors.white70
@@ -172,7 +169,7 @@ class ParentDashboardScreen extends ConsumerWidget {
 
           // Subject Strengths vs Weaknesses
           Text(
-            '🧠 Learning Progress Breakdown',
+            tr('learning_breakdown'),
             style: AppTypography.heading3(
               color: isDark ? Colors.white : AppColors.primary,
             ),
@@ -186,7 +183,7 @@ class ParentDashboardScreen extends ConsumerWidget {
               Expanded(
                 child: GlassCard(
                   padding: const EdgeInsets.all(14),
-                  customBorderColor: AppColors.success.withOpacity(0.5),
+                  customBorderColor: AppColors.success.withValues(alpha: 0.5),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -199,7 +196,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'Strong Topics',
+                            tr('strong_topics'),
                             style: AppTypography.bodyBold(
                               color: AppColors.success,
                             ),
@@ -228,7 +225,7 @@ class ParentDashboardScreen extends ConsumerWidget {
               Expanded(
                 child: GlassCard(
                   padding: const EdgeInsets.all(14),
-                  customBorderColor: AppColors.danger.withOpacity(0.5),
+                  customBorderColor: AppColors.danger.withValues(alpha: 0.5),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -241,7 +238,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'Needs Focus',
+                            tr('needs_focus'),
                             style: AppTypography.bodyBold(
                               color: AppColors.danger,
                             ),
@@ -271,7 +268,7 @@ class ParentDashboardScreen extends ConsumerWidget {
 
           // Wishlist Requests Section
           Text(
-            '🎁 Wishlist Requests',
+            tr('wishlist_requests'),
             style: AppTypography.heading3(
               color: isDark ? Colors.white : AppColors.primary,
             ),
@@ -280,67 +277,74 @@ class ParentDashboardScreen extends ConsumerWidget {
 
           Consumer(
             builder: (context, ref, child) {
-              final shopItems = ref.watch(shopItemsProvider);
-              final requestedItems = shopItems.where((item) => item.isRequested).toList();
+              final shopItemsAsync = ref.watch(shopItemsProvider);
+              
+              return shopItemsAsync.when(
+                data: (shopItems) {
+                  final requestedItems = shopItems.where((item) => item.isRequested).toList();
 
-              if (requestedItems.isEmpty) {
-                return GlassCard(
-                  padding: const EdgeInsets.all(16),
-                  child: Center(
-                    child: Text(
-                      'No pending requests from ${user.name}.',
-                      style: AppTypography.caption(color: isDark ? Colors.white70 : Colors.black54),
-                    ),
-                  ),
-                );
-              }
-
-              return ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: requestedItems.length,
-                itemBuilder: (context, index) {
-                  final item = requestedItems[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: GlassCard(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          Text(item.emoji, style: const TextStyle(fontSize: 28)),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(item.name, 
-                                  style: AppTypography.bodyBold(color: isDark ? Colors.white : Colors.black)),
-                                Text('Cost: ${item.coinCost} Coins', 
-                                  style: AppTypography.caption(color: Colors.grey)),
-                              ],
-                            ),
-                          ),
-                          BouncyButton(
-                            text: 'Gift ✅',
-                            width: 90,
-                            height: 36,
-                            gradientStart: AppColors.success,
-                            onTap: () {
-                              ref.read(shopItemsProvider.notifier).buyItem(item.id);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Gifted ${item.name} to ${user.name}! 🎁'),
-                                  backgroundColor: AppColors.success,
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                            },
-                          ),
-                        ],
+                  if (requestedItems.isEmpty) {
+                    return GlassCard(
+                      padding: const EdgeInsets.all(16),
+                      child: Center(
+                        child: Text(
+                          tr('no_pending_requests', args: [user.name]),
+                          style: AppTypography.caption(color: isDark ? Colors.white70 : Colors.black54),
+                        ),
                       ),
-                    ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: requestedItems.length,
+                    itemBuilder: (context, index) {
+                      final item = requestedItems[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: GlassCard(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              Text(item.emoji, style: const TextStyle(fontSize: 28)),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(item.name, 
+                                      style: AppTypography.bodyBold(color: isDark ? Colors.white : Colors.black)),
+                                    Text(tr('cost_coins', args: [item.coinCost.toString()]), 
+                                      style: AppTypography.caption(color: Colors.grey)),
+                                  ],
+                                ),
+                              ),
+                              BouncyButton(
+                                text: tr('gift'),
+                                width: 90,
+                                height: 36,
+                                gradientStart: AppColors.success,
+                                onTap: () {
+                                  ref.read(userPurchasesProvider.notifier).addPurchase(item.id);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(tr('gift_success', args: [user.name, item.name])),
+                                      backgroundColor: AppColors.success,
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Text('Error: $e'),
               );
             },
           ),
@@ -349,7 +353,7 @@ class ParentDashboardScreen extends ConsumerWidget {
 
           // Screen Time Limits & Parental Control Settings
           Text(
-            '⚙️ Parental Controls',
+            tr('parental_controls'),
             style: AppTypography.heading3(
               color: isDark ? Colors.white : AppColors.primary,
             ),
@@ -362,17 +366,17 @@ class ParentDashboardScreen extends ConsumerWidget {
               children: [
                 SwitchListTile(
                   title: Text(
-                    'Daily Screen Time Limit',
+                    tr('screen_time_limit'),
                     style: AppTypography.subtitle1(
                       color: isDark ? Colors.white : Colors.black,
                     ),
                   ),
                   subtitle: Text(
-                    'Limit app usage to ${report.screenTimeLimitMinutes} minutes daily',
+                    tr('limit_subtitle', args: [report.screenTimeLimitMinutes.toString()]),
                     style: AppTypography.caption(color: Colors.grey),
                   ),
                   value: report.isLimitEnabled,
-                  activeColor: AppColors.primary,
+                  activeThumbColor: AppColors.primary,
                   onChanged: (val) =>
                       ref.read(parentReportProvider.notifier).toggleLimit(val),
                 ),
@@ -413,7 +417,7 @@ class ParentDashboardScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 20),
@@ -429,7 +433,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTypography.caption(
-                      color: isDark ? Colors.white70 : Colors.grey.shade700,
+                      color: isDark ? Colors.white70 : Colors.black54,
                     ),
                   ),
                   Text(
@@ -437,7 +441,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTypography.bodyBold(
-                      color: isDark ? Colors.white : Colors.black,
+                      color: isDark ? Colors.white : Colors.black87,
                     ),
                   ),
                 ],

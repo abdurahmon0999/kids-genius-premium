@@ -1,0 +1,15 @@
+- [x] Setup Sky Rush Data Structures
+    - [x] Update `kids_models.dart` with `SkyRushStats`, `SkyRushCharacter`, `SkyRushItem`
+    - [x] Update `storage_service.dart` for local persistence
+- [x] Create Sky Rush Providers
+    - [x] Update `kids_providers.dart` with `skyRushProvider` and update `gameCategoriesProvider`
+- [x] Implement Sky Rush UI
+    - [x] Create `lib/features/sky_rush/screens/sky_rush_home_screen.dart`
+    - [x] Create `lib/features/sky_rush/screens/sky_rush_game_screen.dart`
+    - [x] Create `lib/features/sky_rush/widgets/` (HUD, Dialogs, etc.)
+- [x] Implement Sky Rush Game Engine
+    - [x] Logic for movement, obstacles, coins, and power-ups
+    - [x] Particle systems and visual effects
+- [x] Integration & Localization
+    - [x] Add translation keys to `uz.json`, `ru.json`, `en.json`
+    - [x] Update `main.dart` with the new navigation route

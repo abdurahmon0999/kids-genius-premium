@@ -1,6 +1,8 @@
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
+import 'package:easy_localization/easy_localization.dart';
+
 class VoiceService {
   static final FlutterTts _tts = FlutterTts();
   static final SpeechToText _stt = SpeechToText();
@@ -34,11 +36,11 @@ class VoiceService {
 
   static Future<void> speakSuccess() async {
     List<String> praises = [
-      "Barakalla!", 
-      "Ofarin!", 
-      "Siz juda aqllisiz!", 
-      "Ajoyib!", 
-      "Juda yaxshi!"
+      "praise_1".tr(), 
+      "praise_2".tr(), 
+      "praise_3".tr(), 
+      "praise_4".tr(), 
+      "praise_5".tr()
     ];
     praises.shuffle();
     await _tts.speak(praises.first);
@@ -46,10 +48,10 @@ class VoiceService {
 
   static Future<void> speakError() async {
     List<String> encouraging = [
-      "Yana bir bor urinib ko'r!", 
-      "Xafa bo'lma, uddalaysan!", 
-      "Deyarli topdingiz!", 
-      "Harakat qiling!"
+      "encourage_1".tr(), 
+      "encourage_2".tr(), 
+      "encourage_3".tr(), 
+      "encourage_4".tr()
     ];
     encouraging.shuffle();
     await _tts.speak(encouraging.first);

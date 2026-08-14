@@ -11,6 +11,7 @@ class BouncyButton extends StatefulWidget {
   final Color textColor;
   final double height;
   final double? width;
+  final double? fontSize;
 
   const BouncyButton({
     super.key,
@@ -22,6 +23,7 @@ class BouncyButton extends StatefulWidget {
     this.textColor = Colors.white,
     this.height = 54,
     this.width,
+    this.fontSize,
   });
 
   @override
@@ -89,7 +91,7 @@ class _BouncyButtonState extends State<BouncyButton>
             ),
             boxShadow: [
               BoxShadow(
-                color: widget.gradientStart.withOpacity(0.4),
+                color: widget.gradientStart.withValues(alpha: 0.4),
                 blurRadius: 16,
                 offset: const Offset(0, 6),
               ),
@@ -105,7 +107,9 @@ class _BouncyButtonState extends State<BouncyButton>
               ],
               Text(
                 widget.text,
-                style: AppTypography.buttonText(color: widget.textColor),
+                style: AppTypography.buttonText(color: widget.textColor).copyWith(
+                  fontSize: widget.fontSize,
+                ),
               ),
             ],
           ),

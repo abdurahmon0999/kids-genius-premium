@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/glass_card.dart';
@@ -20,7 +21,7 @@ class LeaderboardScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Global Leaderboard 🏆',
+          'leaderboard_title'.tr(),
           style: AppTypography.heading2(
             color: isDark ? Colors.white : AppColors.primary,
           ),
@@ -29,7 +30,7 @@ class LeaderboardScreen extends ConsumerWidget {
       body: leaderboardAsync.when(
         data: (leaders) {
           if (leaders.isEmpty) {
-            return const Center(child: Text('No heroes found yet. Be the first! 🦁'));
+            return Center(child: Text('no_heroes'.tr()));
           }
           return ListView.separated(
             padding: const EdgeInsets.all(16),
@@ -98,7 +99,7 @@ class LeaderboardScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-        error: (err, stack) => Center(child: Text('Error loading rankings: $err')),
+        error: (err, stack) => Center(child: Text('error_load_rankings'.tr())),
       ),
     );
   }

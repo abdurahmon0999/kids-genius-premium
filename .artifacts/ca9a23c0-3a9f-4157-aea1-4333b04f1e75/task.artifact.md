@@ -1,10 +1,6 @@
-- [x] Phase 1: Onboarding Experience
-- [x] Phase 2: Global Leaderboard (Firebase Sync)
-- [x] Phase 3: Achievements & Badges
-- [x] Phase 4: Parental Wishlist & Full Sync
-- [x] Phase 5: GitHub Polish
-- [/] Phase 6: AI Storyteller Feature
-    - [ ] Add "AI Storyteller" category to `KidsProviders`
-    - [ ] Implement `VoiceService.stop()`
-    - [ ] Create `_buildStorytellerGame()` UI in `MiniGamesScreen`
-    - [ ] Implement personalized story templates and narration logic
+- [ ] Phase 8: Final Polish & Checklist Completion
+    - [/] Robust Image Loading (Fix broken images)
+    - [ ] Dynamic Navigation (Link News/Blog to Details)
+    - [ ] Localization Cleanup (Translate all remaining strings)
+    - [ ] Admin Panel Validation (Ensure data entry works)
+    - [ ] Final Build & Run Verification

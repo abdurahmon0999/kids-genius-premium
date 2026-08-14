@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/bouncy_button.dart';
@@ -20,26 +21,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<OnboardingData> _pages = [
     OnboardingData(
       emoji: '🦁',
-      title: 'Welcome to Kids Genius!',
-      desc: 'Embark on a magical journey of learning and fun with your personal lion guide.',
+      title: 'onboarding_title_1'.tr(),
+      desc: 'onboarding_desc_1'.tr(),
       color: AppColors.primary,
     ),
     OnboardingData(
       emoji: '🎮',
-      title: 'Play & Learn',
-      desc: 'Master Math, Coding, and Science through interactive mini-games and puzzles.',
+      title: 'onboarding_title_2'.tr(),
+      desc: 'onboarding_desc_2'.tr(),
       color: AppColors.secondary,
     ),
     OnboardingData(
       emoji: '🐲',
-      title: 'Care for Your Pet',
-      desc: 'Earn coins by learning to feed, play, and level up your mystical dragon companion.',
+      title: 'onboarding_title_3'.tr(),
+      desc: 'onboarding_desc_3'.tr(),
       color: AppColors.success,
     ),
     OnboardingData(
       emoji: '🏆',
-      title: 'Global Adventures',
-      desc: 'Rank up on the leaderboard and collect rare items in the magical item shop.',
+      title: 'onboarding_title_4'.tr(),
+      desc: 'onboarding_desc_4'.tr(),
       color: AppColors.accent,
     ),
   ];
@@ -59,7 +60,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 padding: const EdgeInsets.all(40),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [data.color.withOpacity(0.8), AppColors.bgLight],
+                    colors: [data.color.withValues(alpha: 0.8), AppColors.bgLight],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
@@ -97,7 +98,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 const SizedBox(height: 32),
                 BouncyButton(
-                  text: _currentPage == _pages.length - 1 ? 'Start Adventure! 🚀' : 'Next ➡️',
+                  text: _currentPage == _pages.length - 1 ? 'start_adventure'.tr() : 'next'.tr(),
                   onTap: () async {
                     if (_currentPage < _pages.length - 1) {
                       _pageController.nextPage(duration: 300.ms, curve: Curves.easeIn);

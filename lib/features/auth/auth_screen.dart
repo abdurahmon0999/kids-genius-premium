@@ -13,6 +13,8 @@ import '../../core/models/kids_models.dart';
 import '../../core/services/kids_providers.dart';
 import '../../core/services/voice_service.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/widgets/password_strength_indicator.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -28,9 +30,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   final TextEditingController _nameController = TextEditingController(text: 'Leo Explorer');
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _otpController = TextEditingController();
-  final TextEditingController _pinController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   bool _isPhoneLoginMode = false;
+  bool _isEmailLoginMode = false;
+  bool _isSignUpMode = false;
   bool _otpSent = false;
   String? _verificationId;
   bool _isLoading = false;
@@ -41,8 +46,56 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     _nameController.dispose();
     _phoneController.dispose();
     _otpController.dispose();
-    _pinController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
+  }
+
+  void _loginWithEmailPassword() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      _showError("error_email_pass".tr());
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      if (userCredential.user != null) {
+        _onAuthSuccess();
+      }
+    } on FirebaseAuthException catch (e) {
+      _showError(e.message ?? "error_auth_failed".tr());
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _registerWithEmailPassword() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      _showError("error_email_pass".tr());
+      return;
+    }
+    if (_passwordController.text.length < 6) {
+      _showError("error_pass_short".tr());
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      if (userCredential.user != null) {
+        _onAuthSuccess();
+      }
+    } on FirebaseAuthException catch (e) {
+      _showError(e.message ?? "error_unknown".tr());
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   void _loginWithGoogle() async {
@@ -65,6 +118,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         final firebaseUser = userCredential.user;
 
         if (firebaseUser != null) {
+          final currentLangCode = context.locale.languageCode;
           var profile = await StorageService.fetchFromCloud(firebaseUser.uid);
           if (profile == null) {
             profile = UserProfileModel(
@@ -81,17 +135,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               activePetEmoji: '🥚',
               profilePic: googleUser.photoUrl ?? '🦁',
               isPremium: false,
+              language: currentLangCode,
             );
             await StorageService.syncToCloud(profile);
           }
           
+          if (!mounted) return;
           ref.read(userProfileProvider.notifier).setUser(profile);
-          VoiceService.speak("Google orqali xush kelibsiz!");
+          context.setLocale(Locale(profile.language));
+          VoiceService.speak("welcome_back".tr());
           widget.onLoginSuccess();
         }
       }
     } catch (e) {
-      _showError("Google login failed: $e");
+      _showError("error_auth_failed".tr());
     } finally {
       setState(() => _isLoading = false);
     }
@@ -104,6 +161,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       final firebaseUser = userCredential.user;
       
       if (firebaseUser != null) {
+        final currentLangCode = context.locale.languageCode;
         // Check if profile exists, if not create one
         var profile = await StorageService.fetchFromCloud(firebaseUser.uid);
         if (profile == null) {
@@ -121,17 +179,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             activePetEmoji: '🥚',
             profilePic: '🦁',
             isPremium: false,
+            language: currentLangCode,
           );
           await StorageService.syncToCloud(profile);
         }
         
+        if (!mounted) return;
         // IMPORTANT: Set the loaded profile to the global provider!
         ref.read(userProfileProvider.notifier).setUser(profile);
-        VoiceService.speak("Xush kelibsiz! Kids Genius-ga marhamat!");
+        context.setLocale(Locale(profile.language));
+        VoiceService.speak("welcome_back".tr());
         widget.onLoginSuccess();
       }
     } catch (e) {
-      _showError("Guest login failed: $e");
+      _showError("error_auth_failed".tr());
     } finally {
       setState(() => _isLoading = false);
     }
@@ -140,7 +201,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   void _sendOtp() async {
     String phoneNumber = _phoneController.text.trim().replaceAll(' ', '');
     if (phoneNumber.isEmpty) {
-      _showError("Telefon raqamini kiriting");
+      _showError("error_phone".tr());
       return;
     }
 
@@ -173,12 +234,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               _otpSent = true;
               _isLoading = false;
             });
-            VoiceService.speak("Test rejimi: Kodni kiriting (123456)");
+            VoiceService.speak("test_mode_otp".tr());
           } else {
             rethrow;
           }
         }
-        VoiceService.speak("Tasdiqlash kodi yuborildi");
+        VoiceService.speak("otp_sent_msg".tr());
       } else {
         await FirebaseAuth.instance.verifyPhoneNumber(
           phoneNumber: phoneNumber,
@@ -196,7 +257,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               _verificationId = vid;
               _isLoading = false;
             });
-            VoiceService.speak("Tasdiqlash kodi yuborildi");
+            VoiceService.speak("otp_sent_msg".tr());
           },
           codeAutoRetrievalTimeout: (String vid) {
             _verificationId = vid;
@@ -206,9 +267,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     } catch (e) {
       String errorMsg = e.toString();
       if (errorMsg.contains('operation-not-allowed')) {
-        _showError("SMS yuborish ruxsat etilmagan. Iltimos, Firebase-da 'Test raqam' qo'shing yoki 'Mehmon' bo'lib kiring.");
+        _showError("error_sms_disabled".tr());
       } else {
-        _showError("Xatolik: $e");
+        _showError("error_unknown".tr());
       }
       setState(() => _isLoading = false);
     }
@@ -216,7 +277,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   void _verifyOtp() async {
     if (_otpController.text.isEmpty) {
-      _showError("Kodni kiriting");
+      _showError("error_otp".tr());
       return;
     }
     setState(() => _isLoading = true);
@@ -238,7 +299,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       }
       _onAuthSuccess();
     } catch (e) {
-      _showError("Kod noto'g'ri yoki amal qilish muddati tugagan");
+      _showError("pin_incorrect".tr());
       setState(() => _isLoading = false);
     }
   }
@@ -246,6 +307,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   void _onAuthSuccess() async {
     final firebaseUser = FirebaseAuth.instance.currentUser;
     if (firebaseUser != null) {
+      final currentLangCode = context.locale.languageCode;
       var profile = await StorageService.fetchFromCloud(firebaseUser.uid);
       if (profile == null) {
         // Create new profile if not exists
@@ -263,12 +325,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           activePetEmoji: '🥚',
           profilePic: '🦁',
           isPremium: false,
+          language: currentLangCode,
         );
         await StorageService.syncToCloud(profile);
       }
       
+      if (!mounted) return;
       // IMPORTANT: Update the global provider with the loaded profile!
       ref.read(userProfileProvider.notifier).setUser(profile);
+      context.setLocale(Locale(profile.language));
       widget.onLoginSuccess();
       VoiceService.speakSuccess();
     }
@@ -290,7 +355,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           gradient: LinearGradient(
             colors: isDark
                 ? [AppColors.bgDark, AppColors.cardDark]
-                : [AppColors.primary.withOpacity(0.15), AppColors.bgLight],
+                : [AppColors.primary.withValues(alpha: 0.15), AppColors.bgLight],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -301,11 +366,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
+                  _buildLanguageSwitcher(),
+                  const SizedBox(height: 16),
                   _buildHeader(isDark),
                   const SizedBox(height: 32),
                   
-                  if (!_isPhoneLoginMode) _buildMainAuthCard(isDark)
-                  else _buildPhoneAuthCard(isDark),
+                  if (!_isPhoneLoginMode && !_isEmailLoginMode) _buildMainAuthCard(isDark)
+                  else if (_isPhoneLoginMode) _buildPhoneAuthCard(isDark)
+                  else _buildEmailAuthCard(isDark),
                   
                   if (_isLoading) 
                     const Padding(
@@ -341,27 +409,27 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          Text('Select Profile', style: AppTypography.heading3(color: isDark ? Colors.white : Colors.black)),
+          Text('select_profile'.tr(), style: AppTypography.heading3(color: isDark ? Colors.white : Colors.black)),
           const SizedBox(height: 20),
           Row(
             children: [
-              _buildRoleTile(UserRole.kid, 'Kid 🚀', CupertinoIcons.person_fill),
+              _buildRoleTile(UserRole.kid, 'kid'.tr(), CupertinoIcons.person_fill),
               const SizedBox(width: 8),
-              _buildRoleTile(UserRole.parent, 'Parent 🛡️', CupertinoIcons.person_2_fill),
+              _buildRoleTile(UserRole.parent, 'parent'.tr(), CupertinoIcons.person_2_fill),
               const SizedBox(width: 8),
-              _buildRoleTile(UserRole.admin, 'Admin 👑', CupertinoIcons.shield_fill),
+              _buildRoleTile(UserRole.admin, 'admin'.tr(), CupertinoIcons.shield_fill),
             ],
           ),
           const SizedBox(height: 24),
           BouncyButton(
-            text: 'Enter as Guest 🌟',
+            text: 'enter_as_guest'.tr(),
             onTap: _loginAsGuest,
             gradientStart: AppColors.success,
             gradientEnd: Colors.green,
           ),
           const SizedBox(height: 12),
           BouncyButton(
-            text: 'Continue with Google 🌐',
+            text: 'continue_google'.tr(),
             onTap: _loginWithGoogle,
             gradientStart: Colors.white,
             gradientEnd: Colors.grey.shade200,
@@ -369,8 +437,95 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           ),
           const SizedBox(height: 12),
           TextButton(
+            onPressed: () => setState(() {
+              _isEmailLoginMode = true;
+              _isSignUpMode = false;
+            }),
+            child: Text('email_login'.tr(), style: TextStyle(color: isDark ? Colors.white70 : AppColors.primary)),
+          ),
+          TextButton(
             onPressed: () => setState(() => _isPhoneLoginMode = true),
-            child: Text('Login with Phone Number 📱', style: TextStyle(color: isDark ? Colors.white70 : AppColors.primary)),
+            child: Text('phone_login'.tr(), style: TextStyle(color: isDark ? Colors.white70 : AppColors.primary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLanguageSwitcher() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _langButton('UZ', const Locale('uz')),
+        const SizedBox(width: 10),
+        _langButton('RU', const Locale('ru')),
+        const SizedBox(width: 10),
+        _langButton('EN', const Locale('en')),
+      ],
+    );
+  }
+
+  Widget _langButton(String label, Locale locale) {
+    final isSelected = context.locale == locale;
+    return GestureDetector(
+      onTap: () => context.setLocale(locale),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.white24,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? AppColors.accent : Colors.transparent),
+        ),
+        child: Text(label, style: TextStyle(color: isSelected ? Colors.white : Colors.black54, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  Widget _buildEmailAuthCard(bool isDark) {
+    return GlassCard(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => setState(() => _isEmailLoginMode = false)),
+              Text(_isSignUpMode ? 'sign_up'.tr() : 'sign_in'.tr(), style: AppTypography.heading3(color: isDark ? Colors.white : Colors.black)),
+            ],
+          ),
+          const SizedBox(height: 20),
+          TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(
+              labelText: 'email'.tr(),
+              prefixIcon: const Icon(CupertinoIcons.mail),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _passwordController,
+            obscureText: true,
+            decoration: InputDecoration(
+              labelText: 'password'.tr(),
+              prefixIcon: const Icon(CupertinoIcons.lock),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onChanged: (val) => setState(() {}),
+          ),
+          if (_isSignUpMode) PasswordStrengthIndicator(password: _passwordController.text),
+          const SizedBox(height: 24),
+          BouncyButton(
+            text: _isSignUpMode ? 'register'.tr() : 'login'.tr(),
+            onTap: _isSignUpMode ? _registerWithEmailPassword : _loginWithEmailPassword,
+          ),
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed: () => setState(() => _isSignUpMode = !_isSignUpMode),
+            child: Text(
+              _isSignUpMode ? 'already_have_account'.tr() : 'need_account'.tr(),
+              style: TextStyle(color: isDark ? Colors.white70 : AppColors.primary),
+            ),
           ),
         ],
       ),
@@ -385,7 +540,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           Row(
             children: [
               IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => setState(() => _isPhoneLoginMode = false)),
-              Text('Phone Login', style: AppTypography.heading3(color: isDark ? Colors.white : Colors.black)),
+              Text('phone_login'.tr(), style: AppTypography.heading3(color: isDark ? Colors.white : Colors.black)),
             ],
           ),
           const SizedBox(height: 20),
@@ -393,14 +548,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             controller: _otpSent ? _otpController : _phoneController,
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(
-              labelText: _otpSent ? 'Enter SMS Code' : 'Phone Number (+998...)',
+              labelText: _otpSent ? 'enter_sms'.tr() : 'phone_number_hint'.tr(),
               prefixIcon: Icon(_otpSent ? CupertinoIcons.lock_shield : CupertinoIcons.phone_fill),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
           const SizedBox(height: 24),
           BouncyButton(
-            text: _otpSent ? 'Verify & Enter ✨' : 'Send Code 📩',
+            text: _otpSent ? 'verify_enter'.tr() : 'send_code'.tr(),
             onTap: _otpSent ? _verifyOtp : _sendOtp,
           ),
         ],

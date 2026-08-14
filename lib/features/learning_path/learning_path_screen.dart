@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../core/widgets/bouncy_button.dart';
 import '../../core/services/kids_providers.dart';
+import '../mini_games/zombie_game_screen.dart';
+import '../sky_rush/screens/sky_rush_home_screen.dart';
+import '../turbo_kart/screens/turbo_kart_home_screen.dart';
 
 class LearningPathScreen extends ConsumerWidget {
   const LearningPathScreen({super.key});
@@ -18,7 +22,7 @@ class LearningPathScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Learning Path 🗺️', style: AppTypography.heading2(color: isDark ? Colors.white : AppColors.primary)),
+        title: Text('learning_path'.tr(), style: AppTypography.heading2(color: isDark ? Colors.white : AppColors.primary)),
       ),
       body: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -53,7 +57,7 @@ class LearningPathScreen extends ConsumerWidget {
                           height: 56,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: game.themeColor.withOpacity(0.2),
+                            color: game.themeColor.withValues(alpha: 0.2),
                             border: Border.all(color: game.themeColor, width: 2),
                           ),
                           child: Center(
@@ -68,7 +72,7 @@ class LearningPathScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                game.title,
+                                game.categoryKey.tr(),
                                 style: AppTypography.subtitle1(color: isDark ? Colors.white : Colors.black),
                               ),
                               const SizedBox(height: 4),
@@ -88,13 +92,30 @@ class LearningPathScreen extends ConsumerWidget {
 
                         // Play Button
                         BouncyButton(
-                          text: 'Play ▶',
+                          text: 'play_btn'.tr(),
                           height: 38,
                           gradientStart: game.themeColor,
                           gradientEnd: game.themeColor.withOpacity(0.8),
                           onTap: () {
-                            ref.read(selectedGameIndexProvider.notifier).state = index;
-                            ref.read(selectedTabProvider.notifier).state = 2; // Mini game player tab
+                            if (game.categoryKey == 'zombie_survival') {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const ZombieGameScreen()),
+                              );
+                            } else if (game.categoryKey == 'sky_rush') {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const SkyRushHomeScreen()),
+                              );
+                            } else if (game.categoryKey == 'turbo_kart') {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const TurboKartHomeScreen()),
+                              );
+                            } else {
+                              ref.read(selectedGameIndexProvider.notifier).state = index;
+                              ref.read(selectedTabProvider.notifier).state = 2; // Mini game player tab
+                            }
                           },
                         ),
                       ],

@@ -1,7 +1,13 @@
+import 'dart:io';
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:easy_localization/easy_localization.dart';
+import '../../core/models/kids_models.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/glass_card.dart';
@@ -17,6 +23,56 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  bool _isUploading = false;
+
+  Future<void> _pickAndUploadImage(StateSetter setModalState) async {
+    final ImagePicker picker = ImagePicker();
+    try {
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
+      
+      if (image != null) {
+        setModalState(() => _isUploading = true);
+        final user = ref.read(userProfileProvider);
+        
+        print("Image selected: ${image.path}");
+        
+        final dynamic uploadData = kIsWeb ? await image.readAsBytes() : File(image.path);
+
+        final String? downloadUrl = await StorageService.uploadProfileImage(
+          uploadData, 
+          user.uid
+        ).timeout(const Duration(seconds: 30));
+
+        if (downloadUrl != null) {
+          ref.read(userProfileProvider.notifier).updateProfile(profilePic: downloadUrl);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(tr('image_saved')), backgroundColor: AppColors.success),
+            );
+          }
+        } else {
+          throw Exception("Upload failed - URL is null");
+        }
+      }
+    } on TimeoutException catch (e) {
+      print("Upload timeout: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr('upload_timeout')), backgroundColor: AppColors.danger),
+        );
+      }
+    } catch (e) {
+      print("Upload error: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr('error_upload')), backgroundColor: AppColors.danger),
+        );
+      }
+    } finally {
+      if (mounted) setModalState(() => _isUploading = false);
+    }
+  }
+
   void _showEditProfile() {
     final user = ref.read(userProfileProvider);
     final nameController = TextEditingController(text: user.name);
@@ -37,9 +93,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('Choose Your Hero Avatar:', 
+                  Text(tr('choose_avatar'), 
                     textAlign: TextAlign.center,
                     style: AppTypography.heading3()),
+                  const SizedBox(height: 16),
+                  
+                  // New Upload Button
+                  if (_isUploading)
+                    Column(
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 8),
+                        Text(tr('uploading'), style: AppTypography.caption(color: Colors.white70)),
+                      ],
+                    )
+                  else
+                    BouncyButton(
+                      text: tr('upload_image'),
+                      gradientStart: AppColors.secondary,
+                      onTap: () => _pickAndUploadImage(setModalState),
+                    ),
+                    
                   const SizedBox(height: 20),
                   
                   // Expanded Premium Avatar Grid
@@ -78,7 +152,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     controller: nameController,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      labelText: 'Hero Name',
+                      labelText: tr('hero_name'),
                       labelStyle: const TextStyle(color: Colors.white70),
                       filled: true,
                       fillColor: Colors.white10,
@@ -88,7 +162,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   const SizedBox(height: 24),
                   BouncyButton(
-                    text: 'Save Changes ✨',
+                    text: tr('save_changes'),
                     onTap: () {
                       ref.read(userProfileProvider.notifier).updateProfile(
                         name: nameController.text,
@@ -96,7 +170,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       );
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Profile Saved! 💾'), behavior: SnackBarBehavior.floating),
+                        SnackBar(content: Text(tr('profile_saved')), behavior: SnackBarBehavior.floating),
                       );
                     },
                   ),
@@ -117,7 +191,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Hero Profile 👤', style: AppTypography.heading2(color: isDark ? Colors.white : AppColors.primary)),
+        title: Text(tr('hero_profile'), style: AppTypography.heading2(color: isDark ? Colors.white : AppColors.primary)),
         actions: [
           IconButton(
             icon: const Icon(CupertinoIcons.pencil_circle_fill, size: 32, color: AppColors.primary),
@@ -140,7 +214,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     height: 100,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.25),
+                      color: Colors.white.withValues(alpha: 0.25),
                       border: Border.all(color: Colors.white, width: 2),
                     ),
                     child: Center(
@@ -171,7 +245,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(color: AppColors.accent, borderRadius: BorderRadius.circular(12)),
-                    child: Text('PREMIUM HERO PASS Active ⭐', style: AppTypography.caption(color: Colors.black)),
+                    child: Text(tr('premium_pass'), style: AppTypography.caption(color: Colors.black)),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Role Switcher for Testing/Admin Access
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildRoleMiniTile(UserRole.kid, tr('kid'), ref, user.role),
+                      const SizedBox(width: 8),
+                      _buildRoleMiniTile(UserRole.parent, tr('parent'), ref, user.role),
+                      const SizedBox(width: 8),
+                      _buildRoleMiniTile(UserRole.admin, tr('admin'), ref, user.role),
+                    ],
                   ),
                 ],
               ),
@@ -185,15 +272,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildStatPill('Coins 🪙', '${user.coins}', AppColors.accent),
-                  _buildStatPill('Total XP ⚡', '${user.xp}', AppColors.success),
+                  _buildStatPill(tr('coins_text'), '${user.coins}', AppColors.accent),
+                  _buildStatPill(tr('total_xp'), '${user.xp}', AppColors.success),
                   _buildStatPill(
-                    'Level 🌟',
+                    tr('level'),
                     '${user.level}',
                     AppColors.primary,
                   ),
                   _buildStatPill(
-                    'Pet 🐲',
+                    tr('pet_text'),
                     pet.name.split(' ')[0],
                     AppColors.purpleMagic,
                   ),
@@ -209,25 +296,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: Column(
                 children: [
                   BouncyButton(
-                    text: 'Switch Account 🔄',
+                    text: tr('switch_account'),
                     gradientStart: AppColors.primary,
                     gradientEnd: AppColors.secondary,
                     onTap: () async {
+                      final messenger = ScaffoldMessenger.of(context);
                       await FirebaseAuth.instance.signOut();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Switching account... Please restart.')),
+                      messenger.showSnackBar(
+                        SnackBar(content: Text(tr('switching_account_msg'))),
                       );
                     },
                   ),
                   const SizedBox(height: 12),
                   BouncyButton(
-                    text: 'Logout & Exit 🚪',
+                    text: tr('logout_exit'),
                     gradientStart: AppColors.danger,
                     gradientEnd: Colors.redAccent,
                     onTap: () async {
+                      final messenger = ScaffoldMessenger.of(context);
                       await FirebaseAuth.instance.signOut();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Logged out!')),
+                      messenger.showSnackBar(
+                        SnackBar(content: Text(tr('logged_out_msg'))),
                       );
                     },
                   ),
@@ -248,6 +337,68 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         const SizedBox(height: 2),
         Text(title, style: AppTypography.caption(color: Colors.grey)),
       ],
+    );
+  }
+
+  Widget _buildRoleMiniTile(UserRole role, String label, WidgetRef ref, UserRole currentRole) {
+    final isSelected = role == currentRole;
+    return GestureDetector(
+      onTap: () {
+        if (role == UserRole.admin && currentRole != UserRole.admin) {
+          _showAdminKeyDialog(ref);
+        } else if (role != currentRole) {
+          ref.read(userProfileProvider.notifier).toggleRole(role);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Role changed to $label'), duration: const Duration(seconds: 1)),
+          );
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.white12,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label.split(' ')[0], // Get only emoji/first part
+          style: TextStyle(fontSize: 18, color: isSelected ? AppColors.primary : Colors.white60),
+        ),
+      ),
+    );
+  }
+
+  void _showAdminKeyDialog(WidgetRef ref) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(tr('admin_key_required')),
+        content: TextField(
+          controller: controller,
+          obscureText: true,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(hintText: tr('enter_admin_key')),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('cancel'))),
+          TextButton(
+            onPressed: () {
+              if (controller.text == "7777") {
+                ref.read(userProfileProvider.notifier).toggleRole(UserRole.admin);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Admin access granted! 👑'), backgroundColor: AppColors.success),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(tr('invalid_admin_key')), backgroundColor: AppColors.danger),
+                );
+              }
+            }, 
+            child: Text(tr('save'))
+          ),
+        ],
+      ),
     );
   }
 }

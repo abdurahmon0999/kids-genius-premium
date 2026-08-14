@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/glass_card.dart';
@@ -18,7 +19,7 @@ class PetSystemScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Pet Sanctuary 🐲',
+          'pet_sanctuary'.tr(),
           style: AppTypography.heading2(
             color: isDark ? Colors.white : AppColors.primary,
           ),
@@ -65,7 +66,7 @@ class PetSystemScreen extends ConsumerWidget {
                     style: AppTypography.heading2(color: Colors.white),
                   ),
                   Text(
-                    'Level ${pet.level} Magical Companion',
+                    'magical_companion'.tr(args: [pet.level.toString()]),
                     style: AppTypography.caption(color: AppColors.accent),
                   ),
                 ],
@@ -84,7 +85,7 @@ class PetSystemScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Happiness ❤️',
+                        'happiness'.tr(),
                         style: AppTypography.subtitle1(
                           color: isDark ? Colors.white : Colors.black87,
                         ),
@@ -115,7 +116,7 @@ class PetSystemScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Fullness 🍎',
+                        'fullness'.tr(),
                         style: AppTypography.subtitle1(
                           color: isDark ? Colors.white : Colors.black87,
                         ),
@@ -149,14 +150,14 @@ class PetSystemScreen extends ConsumerWidget {
               children: [
                 Expanded(
                   child: BouncyButton(
-                    text: 'Feed Snack 🍎',
+                    text: 'feed_snack'.tr(),
                     gradientStart: AppColors.success,
                     gradientEnd: Colors.teal,
                     onTap: () {
                       ref.read(petProvider.notifier).feedPet();
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('🍎 Yum! Pet fed (+20 Fullness)!'),
+                        SnackBar(
+                          content: Text('pet_fed_msg'.tr()),
                           backgroundColor: AppColors.success,
                           behavior: SnackBarBehavior.floating,
                         ),
@@ -167,14 +168,14 @@ class PetSystemScreen extends ConsumerWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: BouncyButton(
-                    text: 'Play Game 🎾',
+                    text: 'play_game_btn'.tr(),
                     gradientStart: AppColors.accent,
                     gradientEnd: Colors.orange,
                     onTap: () {
                       ref.read(petProvider.notifier).playWithPet();
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('🎾 Played with Pet (+25 Happiness)!'),
+                        SnackBar(
+                          content: Text('pet_played_msg'.tr()),
                           backgroundColor: AppColors.accent,
                           behavior: SnackBarBehavior.floating,
                         ),

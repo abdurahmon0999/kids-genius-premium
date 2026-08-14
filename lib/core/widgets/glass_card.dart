@@ -38,12 +38,12 @@ class GlassCard extends StatelessWidget {
                 LinearGradient(
                   colors: isDark
                       ? [
-                          AppColors.cardDark.withOpacity(0.7),
-                          AppColors.cardDark.withOpacity(0.4),
+                          AppColors.cardDark.withValues(alpha: 0.7),
+                          AppColors.cardDark.withValues(alpha: 0.4),
                         ]
                       : [
-                          Colors.white.withOpacity(0.85),
-                          Colors.white.withOpacity(0.55),
+                          Colors.white.withValues(alpha: 0.85),
+                          Colors.white.withValues(alpha: 0.55),
                         ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -56,8 +56,8 @@ class GlassCard extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                 color: isDark
-                    ? Colors.black.withOpacity(0.3)
-                    : AppColors.primary.withOpacity(0.08),
+                    ? Colors.black.withValues(alpha: 0.3)
+                    : AppColors.primary.withValues(alpha: 0.08),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),

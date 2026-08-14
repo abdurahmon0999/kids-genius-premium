@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../models/kids_models.dart';
 import 'storage_service.dart';
 
@@ -124,61 +126,77 @@ final gameCategoriesProvider = Provider<List<GameCategoryModel>>((ref) {
         id: 'g15', title: 'Color Splash', categoryKey: 'color_splash', iconEmoji: '🌈', themeColor: const Color(0xFFF59E0B), completedLessons: 5, totalLessons: 12, isUnlocked: true),
     GameCategoryModel(
         id: 'g16', title: 'AI Storyteller', categoryKey: 'storyteller', iconEmoji: '📖', themeColor: const Color(0xFF8B5CF6), completedLessons: 2, totalLessons: 10, isUnlocked: true),
+    GameCategoryModel(
+        id: 'g17', title: 'Zombie Survival', categoryKey: 'zombie_survival', iconEmoji: '🧟', themeColor: const Color(0xFFEF4444), completedLessons: 0, totalLessons: 1, isUnlocked: true),
+    GameCategoryModel(
+        id: 'g18', title: 'Sky Rush', categoryKey: 'sky_rush', iconEmoji: '🚀', themeColor: const Color(0xFF00C2FF), completedLessons: 0, totalLessons: 1, isUnlocked: true),
+    GameCategoryModel(
+        id: 'g19', title: 'Turbo Kart', categoryKey: 'turbo_kart', iconEmoji: '🏎️', themeColor: const Color(0xFFFFB703), completedLessons: 0, totalLessons: 1, isUnlocked: true),
   ];
 });
 
-// Shop Items Provider
-class ShopItemsNotifier extends StateNotifier<List<ShopItemModel>> {
-  final UserProfileModel? _user;
+final shopItemsProvider = StreamProvider<List<ShopItemModel>>((ref) {
+  return FirebaseFirestore.instance.collection('shop_items').snapshots().map((snapshot) {
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+      return ShopItemModel(
+        id: doc.id,
+        name: data['name'] ?? '',
+        type: data['type'] ?? 'hat',
+        coinCost: data['coinCost'] ?? 100,
+        rarity: Rarity.values[data['rarity'] ?? 0],
+        emoji: data['emoji'] ?? '❓',
+        isPurchased: false, 
+        isRequested: data['requested_by'] != null && (data['requested_by'] as List).contains(ref.read(userProfileProvider).uid),
+      );
+    }).toList();
+  });
+});
 
-  ShopItemsNotifier(this._user) : super([]) {
-    _loadShopItems();
+// Helper for purchases (kept as StateNotifier for local UI response)
+class UserPurchasesNotifier extends StateNotifier<List<String>> {
+  final String? uid;
+  UserPurchasesNotifier(this.uid) : super([]) {
+    _load();
   }
 
-  void _loadShopItems() {
-    state = [
-      ShopItemModel(id: 's1', name: 'Golden Crown', type: 'hat', coinCost: 150, rarity: Rarity.legendary, emoji: '👑', isPurchased: true),
-      ShopItemModel(id: 's2', name: 'Wizard Hat', type: 'hat', coinCost: 100, rarity: Rarity.epic, emoji: '🧙‍♂️'),
-      ShopItemModel(id: 's3', name: 'Astronaut Suit', type: 'outfit', coinCost: 250, rarity: Rarity.legendary, emoji: '🚀', isPurchased: true),
-      ShopItemModel(id: 's4', name: 'Superhero Cape', type: 'outfit', coinCost: 120, rarity: Rarity.rare, emoji: '🦸‍♂️'),
-      ShopItemModel(id: 's5', name: 'Sparky Dragon', type: 'pet', coinCost: 300, rarity: Rarity.legendary, emoji: '🐲', isPurchased: true),
-      ShopItemModel(id: 's6', name: 'Cosmic Unicorn', type: 'pet', coinCost: 350, rarity: Rarity.legendary, emoji: '🦄'),
-      ShopItemModel(id: 's7', name: 'Magic Wand', type: 'mystery', coinCost: 80, rarity: Rarity.rare, emoji: '🪄'),
-      ShopItemModel(id: 's8', name: 'Treasure Chest', type: 'mystery', coinCost: 200, rarity: Rarity.epic, emoji: '🪙'),
-    ];
-  }
-
-  void _sync() {
-    if (_user != null) {
-      StorageService.syncItemsToCloud(_user!.uid, state);
+  Future<void> _load() async {
+    if (uid != null) {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).collection('data').doc('items').get();
+      if (doc.exists) {
+        state = List<String>.from(doc.data()?['purchased'] ?? []);
+      }
     }
   }
 
-  void buyItem(String id) {
-    state = state.map((item) {
-      if (item.id == id) {
-        return item.copyWith(isPurchased: true, isRequested: false);
+  void addPurchase(String itemId) {
+    if (!state.contains(itemId)) {
+      state = [...state, itemId];
+      if (uid != null) {
+        FirebaseFirestore.instance.collection('users').doc(uid).collection('data').doc('items').set({
+          'purchased': state,
+        }, SetOptions(merge: true));
+        
+        // Remove from wishlist if it was there
+        FirebaseFirestore.instance.collection('shop_items').doc(itemId).update({
+          'requested_by': FieldValue.arrayRemove([uid]),
+        });
       }
-      return item;
-    }).toList();
-    _sync();
+    }
   }
 
-  void requestItem(String id) {
-    state = state.map((item) {
-      if (item.id == id) {
-        return item.copyWith(isRequested: true);
-      }
-      return item;
-    }).toList();
-    _sync();
+  void requestItem(String itemId) {
+    if (uid != null) {
+      FirebaseFirestore.instance.collection('shop_items').doc(itemId).update({
+        'requested_by': FieldValue.arrayUnion([uid]),
+      });
+    }
   }
 }
 
-final shopItemsProvider =
-    StateNotifierProvider<ShopItemsNotifier, List<ShopItemModel>>((ref) {
+final userPurchasesProvider = StateNotifierProvider<UserPurchasesNotifier, List<String>>((ref) {
   final user = ref.watch(userProfileProvider);
-  return ShopItemsNotifier(user);
+  return UserPurchasesNotifier(user.uid);
 });
 
 // Pet State Provider
@@ -205,7 +223,7 @@ class PetNotifier extends StateNotifier<PetModel> {
 
   void _sync() {
     if (_user != null) {
-      StorageService.syncPetToCloud(_user!.uid, state);
+      StorageService.syncPetToCloud(_user.uid, state);
     }
   }
 
@@ -291,3 +309,301 @@ final isDarkModeProvider = StateProvider<bool>((ref) => false);
 
 // Accessibility Voice Provider
 final isAccessibilityVoiceEnabledProvider = StateProvider<bool>((ref) => true);
+
+// Global Page Loading Provider
+final isPageLoadingProvider = StateProvider<bool>((ref) => false);
+
+// Enhanced Navigation Provider
+final navigationHelperProvider = Provider((ref) {
+  return (int index) async {
+    final isConnected = ref.read(connectivityProvider).value ?? true;
+    if (!isConnected) return;
+    
+    if (ref.read(selectedTabProvider) == index) return;
+
+    ref.read(isPageLoadingProvider.notifier).state = true;
+    await Future.delayed(const Duration(milliseconds: 600));
+    ref.read(selectedTabProvider.notifier).state = index;
+    ref.read(isPageLoadingProvider.notifier).state = false;
+  };
+});
+
+// --- New: Daily Quest Provider ---
+
+class QuestNotifier extends StateNotifier<List<QuestModel>> {
+  QuestNotifier() : super(_initialQuests()) {
+    _loadProgress();
+  }
+
+  static List<QuestModel> _initialQuests() {
+    return [
+      QuestModel(id: 'q1', title: 'quest_math', targetCategory: 'math', goalCount: 3, rewardCoins: 50, iconEmoji: '🔢'),
+      QuestModel(id: 'q2', title: 'quest_animals', targetCategory: 'animal_quiz', goalCount: 2, rewardCoins: 30, iconEmoji: '🦁'),
+      QuestModel(id: 'q3', title: 'quest_stories', targetCategory: 'storyteller', goalCount: 1, rewardCoins: 40, iconEmoji: '📖'),
+    ];
+  }
+
+  void _loadProgress() {
+    final savedData = StorageService.loadQuestsLocal();
+    if (savedData != null) {
+      state = [
+        for (final quest in state)
+          _applyProgress(quest, savedData)
+      ];
+    }
+  }
+
+  QuestModel _applyProgress(QuestModel quest, List<Map<String, dynamic>> savedData) {
+    try {
+      final saved = savedData.firstWhere((e) => e['id'] == quest.id);
+      return quest.copyWith(
+        currentProgress: saved['currentProgress'] ?? 0,
+        isClaimed: saved['isClaimed'] ?? false,
+      );
+    } catch (_) {
+      return quest;
+    }
+  }
+
+  void _persist() {
+    StorageService.saveQuestsLocal(state);
+  }
+
+  void updateProgress(String categoryKey) {
+    state = [
+      for (final quest in state)
+        if (quest.targetCategory == categoryKey && !quest.isCompleted)
+          quest.copyWith(currentProgress: quest.currentProgress + 1)
+        else
+          quest
+    ];
+    _persist();
+  }
+
+  void claimReward(String questId, WidgetRef ref) {
+    state = [
+      for (final quest in state)
+        if (quest.id == questId && quest.isCompleted && !quest.isClaimed)
+          _performClaim(quest, ref)
+        else
+          quest
+    ];
+    _persist();
+  }
+
+  QuestModel _performClaim(QuestModel quest, WidgetRef ref) {
+    ref.read(userProfileProvider.notifier).addCoins(quest.rewardCoins);
+    ref.read(userProfileProvider.notifier).addXp(quest.rewardCoins ~/ 2);
+    return quest.copyWith(isClaimed: true);
+  }
+
+  void resetDaily() {
+    state = _initialQuests();
+    _persist();
+  }
+}
+
+final questProvider = StateNotifierProvider<QuestNotifier, List<QuestModel>>((ref) {
+  return QuestNotifier();
+});
+
+// --- New Content Providers ---
+
+final carouselProvider = StreamProvider<List<CarouselItem>>((ref) {
+  return FirebaseFirestore.instance
+      .collection('carousel')
+      .limit(3)
+      .snapshots()
+      .map((snapshot) {
+    return snapshot.docs.map((doc) => CarouselItem.fromJson(doc.data(), doc.id)).toList();
+  });
+});
+
+final blogProvider = StreamProvider<List<BlogPost>>((ref) {
+  return FirebaseFirestore.instance.collection('blog').orderBy('date', descending: true).snapshots().map((snapshot) {
+    return snapshot.docs.map((doc) => BlogPost.fromJson(doc.data(), doc.id)).toList();
+  });
+});
+
+final newsProvider = StreamProvider<List<NewsItem>>((ref) {
+  return FirebaseFirestore.instance.collection('news').orderBy('date', descending: true).snapshots().map((snapshot) {
+    return snapshot.docs.map((doc) => NewsItem.fromJson(doc.data(), doc.id)).toList();
+  });
+});
+
+final reviewsProvider = StreamProvider<List<UserReview>>((ref) {
+  return FirebaseFirestore.instance.collection('reviews').orderBy('date', descending: true).snapshots().map((snapshot) {
+    return snapshot.docs.map((doc) => UserReview.fromJson(doc.data(), doc.id)).toList();
+  });
+});
+
+class LocalReviewsNotifier extends StateNotifier<List<UserReview>> {
+  LocalReviewsNotifier() : super(StorageService.loadReviewsLocal());
+
+  void addReview(UserReview review) {
+    state = [...state, review];
+    StorageService.saveReviewLocal(review);
+  }
+}
+
+final localReviewsProvider = StateNotifierProvider<LocalReviewsNotifier, List<UserReview>>((ref) {
+  return LocalReviewsNotifier();
+});
+
+final connectivityProvider = StreamProvider<bool>((ref) {
+  return Connectivity().onConnectivityChanged.map((results) {
+    // connectivity_plus v6.0.0+ returns a List<ConnectivityResult>
+    return !results.contains(ConnectivityResult.none);
+  });
+});
+
+// --- New: Zombie Game Provider ---
+
+class ZombieGameNotifier extends StateNotifier<ZombieStats> {
+  ZombieGameNotifier() : super(StorageService.loadZombieStatsLocal() ?? ZombieStats());
+
+  void updateStats({
+    int? score,
+    int? time,
+    int? wave,
+    int? kills,
+    int? coins,
+  }) {
+    state = state.copyWith(
+      bestScore: (score ?? 0) > state.bestScore ? score : state.bestScore,
+      bestTime: (time ?? 0) > state.bestTime ? time : state.bestTime,
+      highestWave: (wave ?? 1) > state.highestWave ? wave : state.highestWave,
+      totalKills: state.totalKills + (kills ?? 0),
+      totalCoins: state.totalCoins + (coins ?? 0),
+    );
+    _persist();
+  }
+
+  bool buyUpgrade(String type, int cost) {
+    if (state.totalCoins >= cost) {
+      state = state.copyWith(
+        totalCoins: state.totalCoins - cost,
+        dmgLevel: type == 'dmg' ? state.dmgLevel + 1 : state.dmgLevel,
+        hpLevel: type == 'hp' ? state.hpLevel + 1 : state.hpLevel,
+        speedLevel: type == 'speed' ? state.speedLevel + 1 : state.speedLevel,
+        critLevel: type == 'crit' ? state.critLevel + 1 : state.critLevel,
+      );
+      _persist();
+      return true;
+    }
+    return false;
+  }
+
+  void _persist() {
+    StorageService.saveZombieStatsLocal(state);
+  }
+}
+
+final zombieGameProvider = StateNotifierProvider<ZombieGameNotifier, ZombieStats>((ref) {
+  return ZombieGameNotifier();
+});
+
+// --- New: Sky Rush Game Provider ---
+
+class SkyRushNotifier extends StateNotifier<SkyRushStats> {
+  SkyRushNotifier() : super(StorageService.loadSkyRushStatsLocal() ?? SkyRushStats());
+
+  void updateStats({int? score, int? coins, int? crystals, int? xp}) {
+    int newXp = state.xp + (xp ?? 0);
+    int newLevel = state.level;
+    if (newXp >= state.level * 200) {
+      newXp -= state.level * 200;
+      newLevel++;
+    }
+
+    state = state.copyWith(
+      bestScore: (score ?? 0) > state.bestScore ? score : state.bestScore,
+      totalCoins: state.totalCoins + (coins ?? 0),
+      totalCrystals: state.totalCrystals + (crystals ?? 0),
+      xp: newXp,
+      level: newLevel,
+    );
+    _persist();
+  }
+
+  void unlockCharacter(String name, int coinCost, int crystalCost) {
+    if (state.totalCoins >= coinCost && state.totalCrystals >= crystalCost) {
+      state = state.copyWith(
+        totalCoins: state.totalCoins - coinCost,
+        totalCrystals: state.totalCrystals - crystalCost,
+        unlockedCharacters: [...state.unlockedCharacters, name],
+      );
+      _persist();
+    }
+  }
+
+  void setActiveCharacter(String name) {
+    if (state.unlockedCharacters.contains(name)) {
+      state = state.copyWith(activeCharacter: name);
+      _persist();
+    }
+  }
+
+  void _persist() {
+    StorageService.saveSkyRushStatsLocal(state);
+  }
+}
+
+final skyRushProvider = StateNotifierProvider<SkyRushNotifier, SkyRushStats>((ref) {
+  return SkyRushNotifier();
+});
+
+// --- New: Turbo Kart Provider ---
+
+class TurboKartNotifier extends StateNotifier<TurboKartStats> {
+  TurboKartNotifier() : super(StorageService.loadTurboKartStatsLocal() ?? TurboKartStats());
+
+  void updateStats({int? coins, int? crystals, int? xp}) {
+    int newXp = state.xp + (xp ?? 0);
+    int newLevel = state.level;
+    if (newXp >= state.level * 300) {
+      newXp -= state.level * 300;
+      newLevel++;
+    }
+
+    state = state.copyWith(
+      totalCoins: state.totalCoins + (coins ?? 0),
+      totalCrystals: state.totalCrystals + (crystals ?? 0),
+      xp: newXp,
+      level: newLevel,
+    );
+    _persist();
+  }
+
+  void upgradeKart(String kartId, int cost) {
+    if (state.totalCoins >= cost) {
+      final currentLvl = state.kartLevels[kartId] ?? 1;
+      final newLevels = Map<String, int>.from(state.kartLevels);
+      newLevels[kartId] = currentLvl + 1;
+      
+      state = state.copyWith(
+        totalCoins: state.totalCoins - cost,
+        kartLevels: newLevels,
+      );
+      _persist();
+    }
+  }
+
+  void unlockKart(String kartId, int cost) {
+    if (state.totalCrystals >= cost && !state.unlockedKarts.contains(kartId)) {
+      state = state.copyWith(
+        totalCrystals: state.totalCrystals - cost,
+        unlockedKarts: [...state.unlockedKarts, kartId],
+      );
+      _persist();
+    }
+  }
+
+  void _persist() {
+    StorageService.saveTurboKartStatsLocal(state);
+  }
+}
+
+final turboKartProvider = StateNotifierProvider<TurboKartNotifier, TurboKartStats>((ref) {
+  return TurboKartNotifier();
+});
