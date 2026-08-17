@@ -20,25 +20,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<OnboardingData> _pages = [
     OnboardingData(
-      emoji: '🦁',
+      icon: Icons.auto_awesome,
       title: 'onboarding_title_1'.tr(),
       desc: 'onboarding_desc_1'.tr(),
       color: AppColors.primary,
     ),
     OnboardingData(
-      emoji: '🎮',
+      icon: Icons.videogame_asset,
       title: 'onboarding_title_2'.tr(),
       desc: 'onboarding_desc_2'.tr(),
       color: AppColors.secondary,
     ),
     OnboardingData(
-      emoji: '🐲',
+      icon: Icons.pets,
       title: 'onboarding_title_3'.tr(),
       desc: 'onboarding_desc_3'.tr(),
       color: AppColors.success,
     ),
     OnboardingData(
-      emoji: '🏆',
+      icon: Icons.emoji_events,
       title: 'onboarding_title_4'.tr(),
       desc: 'onboarding_desc_4'.tr(),
       color: AppColors.accent,
@@ -68,9 +68,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(data.emoji, style: const TextStyle(fontSize: 120))
+                    Icon(data.icon, size: 120, color: Colors.white)
                         .animate()
-                        .scale(duration: 600.ms, curve: Curves.elasticOut),
+                        .scale(duration: 600.ms, curve: Curves.elasticOut)
+                        .shimmer(duration: 2.seconds),
                     const SizedBox(height: 40),
                     Text(data.title, 
                       textAlign: TextAlign.center,
@@ -133,9 +134,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 }
 
 class OnboardingData {
-  final String emoji;
+  final IconData icon;
   final String title;
   final String desc;
   final Color color;
-  OnboardingData({required this.emoji, required this.title, required this.desc, required this.color});
+  OnboardingData({required this.icon, required this.title, required this.desc, required this.color});
 }

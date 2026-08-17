@@ -108,7 +108,7 @@ class AdminDashboardScreen extends ConsumerWidget {
         _actionTile(tr('manage_messages'), Icons.message, Colors.cyan, () => _showManageMessagesDialog(context)),
         _actionTile(tr('manage_reviews'), Icons.star_rate, Colors.amber, () => _showManageReviewsDialog(context)),
         _actionTile(tr('seed_data'), Icons.auto_awesome, Colors.deepPurple, () => _seedInitialData(context)),
-        _actionTile(tr('user_management'), Icons.people, Colors.purple, () {}),
+        _actionTile(tr('user_management'), Icons.people, Colors.purple, () => _showManageUsersDialog(context)),
       ],
     );
   }
@@ -600,6 +600,89 @@ class AdminDashboardScreen extends ConsumerWidget {
               Navigator.pop(context);
             },
             child: Text(tr('add_btn')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showManageUsersDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(tr('user_management')),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance.collection('users').snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+              final docs = snapshot.data!.docs;
+              if (docs.isEmpty) return const Center(child: Text("No users found."));
+
+              return Column(
+                children: [
+                  Text(tr('total_users', args: [docs.length.toString()]), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const Divider(),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: docs.length,
+                      itemBuilder: (context, index) {
+                        final doc = docs[index];
+                        final data = doc.data() as Map<String, dynamic>;
+                        final roleIndex = data['role'] ?? 0;
+                        final roleName = UserRole.values[roleIndex].name.toUpperCase();
+                        
+                        return Card(
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              child: Text(data['profilePic'] ?? '🦁'),
+                            ),
+                            title: Text(data['name'] ?? 'No Name'),
+                            subtitle: Text('Role: $roleName | LVL: ${data['level'] ?? 1}\nCoins: ${data['coins'] ?? 0} | XP: ${data['xp'] ?? 0}'),
+                            isThreeLine: true,
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.redAccent),
+                              onPressed: () {
+                                _confirmDeleteUser(context, doc.reference);
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('close'))),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteUser(BuildContext context, DocumentReference userRef) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(tr('delete_review_confirm')),
+        content: Text(tr('delete_user_confirm')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('cancel'))),
+          TextButton(
+            onPressed: () async {
+              await userRef.delete();
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(tr('user_deleted_success')), backgroundColor: AppColors.success),
+              );
+            }, 
+            child: Text(tr('add_btn'), style: const TextStyle(color: Colors.redAccent))
           ),
         ],
       ),

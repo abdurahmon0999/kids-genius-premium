@@ -1,44 +1,24 @@
-# Implementation Plan - Sky Rush Game Integration
+# Implementation Plan - User Management in Admin Dashboard
 
-Integrate a high-quality, futuristic endless runner game called **Sky Rush** into the Kids Genius platform.
+Implement the functional User Management section in the Admin Dashboard to allow admins to view and manage registered users.
 
 ## Proposed Changes
 
-### Core: Models & Infrastructure
-#### [MODIFY] [kids_models.dart](file:///C:/Users/Пользователь/OneDrive/Desktop/untitled/lib/core/models/kids_models.dart)
-- Add `SkyRushStats`, `SkyRushCharacter`, and `SkyRushItem` models.
-- Track distances, coins, crystals, and unlocked characters/skins.
-
-#### [MODIFY] [kids_providers.dart](file:///C:/Users/Пользователь/OneDrive/Desktop/untitled/lib/core/services/kids_providers.dart)
-- Add "Sky Rush" to `gameCategoriesProvider`.
-- Create `skyRushProvider` to manage game state, inventory, and session rewards.
-
-#### [MODIFY] [storage_service.dart](file:///C:/Users/Пользователь/OneDrive/Desktop/untitled/lib/core/services/storage_service.dart)
-- Implement `saveSkyRushStatsLocal` and `loadSkyRushStatsLocal` to persist progress.
-
-### Features: Sky Rush Game
-#### [NEW] Directory: `lib/features/sky_rush/`
-- **`sky_rush_home_screen.dart`**: Futuristic menu with animated hero, character selection, and inventory access.
-- **`sky_rush_game_screen.dart`**: The core game engine.
-    - 3D-like perspective using 2D `CustomPainter`.
-    - Lane-based movement (Left, Center, Right).
-    - Power-ups: Magnet, Shield, Jet Boost, Freeze, Double Coin.
-    - Procedural obstacle and coin spawning.
-- **`widgets/`**: Virtual controls (swipe detection), HUD, and glassmorphism-style dialogs (Game Over, Level Up, Mystery Box).
+### Features: Admin Dashboard
+#### [MODIFY] [admin_dashboard_screen.dart](file:///C:/Users/Пользователь/OneDrive/Desktop/untitled/lib/features/admin_dashboard/admin_dashboard_screen.dart)
+- Implement `_showManageUsersDialog(BuildContext context)` to fetch and display users from the `users` collection.
+- Show user details: Name, Role, Level, Coins, and XP.
+- Add functionality to delete a user with a confirmation dialog.
+- Update the `user_management` action tile to call this new function.
 
 ### Core: Translations
 #### [MODIFY] [uz.json](file:///C:/Users/Пользователь/OneDrive/Desktop/untitled/assets/translations/uz.json), [ru.json](file:///C:/Users/Пользователь/OneDrive/Desktop/untitled/assets/translations/ru.json), [en.json](file:///C:/Users/Пользователь/OneDrive/Desktop/untitled/assets/translations/en.json)
-- Add keys for worlds (Sky Valley, Neon City), characters, power-ups, and game-specific UI.
+- Add keys like `delete_user_confirm`, `user_deleted_success`, `total_users`.
 
 ## Verification Plan
 
 ### Manual Verification
-1.  **Entry**: Launch Sky Rush from the Mini Games menu.
-2.  **Home Screen**: Verify character animation and button functionality (Inventory, Characters).
-3.  **Gameplay**:
-    - Test swiping (Left/Right/Up/Down).
-    - Verify power-up effects (e.g., Magnet pulling coins).
-    - Test obstacle collisions (losing a life).
-4.  **Progression**: Verify coin collection, distance scoring, and high-score saving.
-5.  **Shop/Inventory**: Purchase a skin or character and verify it updates in the game.
-6.  **Performance**: Ensure 60 FPS on both Web and Mobile.
+1.  **Open Admin Panel**: Navigate to Profile -> Admin 👑 (Key: 7777).
+2.  **User Management**: Click "Foydalanuvchilarni boshqarish" (User Management).
+3.  **List Check**: Verify that a list of users appears with their correct stats.
+4.  **Delete User**: Attempt to delete a test user and verify the deletion in Firestore.

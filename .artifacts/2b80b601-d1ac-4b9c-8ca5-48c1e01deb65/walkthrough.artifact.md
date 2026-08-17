@@ -1,46 +1,40 @@
-# Walkthrough - Turbo Kart Game Integration
+# Walkthrough - User Management Integration
 
-I have successfully integrated the new **Turbo Kart** racing game into the Kids Genius platform. This is a high-speed arcade racer with AI opponents, customization, and progression.
+I have successfully implemented the **User Management** section in the Admin Dashboard. Admins can now view and manage all registered users directly from the app.
 
 ## Changes Made
 
-### 1. Turbo Kart Game Engine 🏎️💨
-- **Racing Mechanics**: Implemented a 3D-perspective racing engine using Flutter's `CustomPainter`.
-- **AI Competitors**: Added smart AI racers (Nova, Robo, Max) that compete with the player for the podium.
-- **Nitro System**: Players can collect energy and activate a powerful Nitro boost for a speed explosion.
-- **Obstacles & Coins**: Procedural track generation with road-blocks to dodge and coins to collect.
-- **Dynamic Physics**: Smooth handling with tilt-like lane movement and realistic acceleration.
+### 1. User Management Dialog 👥
+- **Real-time Data**: Added a `StreamBuilder` to fetch and display the list of users from the Firestore `users` collection.
+- **Detailed Stats**: For each user, the dashboard now shows:
+    - **Name** and **Profile Picture/Emoji**.
+    - **Role** (Kid, Parent, Admin, etc.).
+    - **Level**, **Coins**, and **XP** balance.
+- **User Deletion**: Implemented a delete function with a safety confirmation dialog to prevent accidental removals.
 
-### 2. Game UI & Experience 🎨
-- **Main Menu**: A premium garage-style home screen where you can see your kart and stats.
-- **Race HUD**: Real-time position tracking, distance progress bar, and Nitro status.
-- **Cinematic Start**: A "3-2-1 GO!" countdown with scale animations.
-- **Victory Screen**: Celebration screen showing your rank, coins earned, and rewards.
+### 2. Localization 🌍
+- Added new translation keys for User Management in **Uzbek**, **Russian**, and **English**:
+    - `total_users`: Displays the count of registered users.
+    - `delete_user_confirm`: Warning message before deleting.
+    - `user_deleted_success`: Success notification after deletion.
 
-### 3. Save System & Progression 💾
-- **Kart Upgrades**: Players earn coins during races to upgrade their kart's stats (Speed, etc.).
-- **Persistence**: High scores, racer levels, and coin/crystal balances are saved locally.
-- **Leveling**: A separate "Racer Level" system that rewards consistent play.
-
-### 4. Integration 🌍
-- **Access**: Turbo Kart is now playable from the **Map (Learning Path)** and **Mini Games** menu.
-- **Cross-Platform Controls**:
-    - **Mobile**: Swipe/Drag to steer, tap Nitro icon to boost.
-    - **Desktop**: Left/Right arrows to steer, `N` for Nitro.
+### 3. Dashboard Integration 👑
+- Connected the "Foydalanuvchilarni boshqarish" (User Management) tile to the new dialog logic.
+- Ensured the UI matches the established Glassmorphism and Card style of the Admin Panel.
 
 ## Verification Results
 
 ### Technical Check
-- **Analysis**: `flutter analyze` shows 0 errors.
-- **Gameplay**: Verified AI behavior, collision detection, and reward payout.
+- **Analysis**: `flutter analyze` on `admin_dashboard_screen.dart` returned 0 errors.
+- **Data Integrity**: Verified that user roles and stats are correctly mapped from the `UserProfileModel`.
 
-### How to play
-1.  Navigate to the **Learning Path (Map)**.
-2.  Select the **Turbo Kart 🏎️** icon.
-3.  Click **START RACE** on the Home Screen.
-4.  Steer using **Swipe** or **Arrows** to avoid obstacles and beat the AI!
+### Manual Verification Path
+1.  **Open Admin Panel**: Go to Profile -> Admin 👑 (Key: 7777).
+2.  **Users List**: Click **"Foydalanuvchilarni boshqarish"**.
+3.  **Check Data**: Verify you can see your own account and any other registered users.
+4.  **Confirm Delete**: Click the red trash icon on a test user and verify the confirmation prompt.
 
 ---
 
-> [!TIP]
-> Winning 1st place gives you **Crystals 💎**, which are needed for the rarest karts in the game!
+> [!CAUTION]
+> Deleting a user is a permanent action. Please use this feature carefully!
